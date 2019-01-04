@@ -1,0 +1,42 @@
+{
+  "my_questions_stats": {
+    "page_url":"https://www.quora.com/partners/questions/all?sort_by=all_time"
+  },
+  "quora_questions_stats":{
+    "page_url":"https://www.quora.com/partners/insights",
+    "functional_links":{
+      "Analyze_Questions_Asked":{
+        "type":"dropdown",
+        "element":"div",
+        "class":"QuestionValueInsightsTimePicker",
+        "id_tag":"select id",
+        "option_selector":"option selected",
+        "options":["A Year Ago","6 Months Ago", "A Month Ago", "A Week Ago"]
+      },
+      "100plus":{
+        "type":"selector",
+        "element":"a",
+        "class":"toggle",
+        "data_bucket_name":"over_one_hundred",
+        "content":"$100.00+"},
+      "10_100":{
+        "type":"selector",
+        "element":"a",
+        "class":"toggle",
+        "data_bucket_name":"ten_to_one_hundred",
+        "content":"$10.00-100.00"},
+      "1_10":{
+        "type":"selector",
+        "element":"a",
+        "class":"toggle",
+        "data_bucket_name":"one_to_ten",
+        "content":"$1.00-10.00"},
+      "0_1":{
+        "type":"selector",
+        "element":"a",
+        "class":"toggle",
+        "data_bucket_name":"less_than_one",
+        "content":"$0.01-1.00"},
+    }
+  }
+}
