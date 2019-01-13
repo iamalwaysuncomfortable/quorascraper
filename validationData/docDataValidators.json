@@ -1,0 +1,22 @@
+{"question":{
+  "id": "/question",
+  "type": "object",
+  "properties": {
+    "md5": {"type": "string"},
+    "question": {"type": "string"},
+    "views": {"type": "number"}
+    },
+  "required": ["md5","question","views"]
+  },
+  "question-db":"result.length===3 && result[0].length === 32 && result[2][0] === '{' && result[2][result[2].length-1] === '}' && preValidateCachedRecord(data)",
+  "skill":{
+    "id": "/skill",
+    "type": "object",
+    "properties": {
+      "md5": {"type": "string"},
+      "skill": {"type": "string"},
+      "reviews": {"type": "number"}
+  },
+    "required": ["md5","skill","reviews"]
+}}
+
