@@ -1,4 +1,5 @@
 {
   "upsertQuestionsProduction":"INSERT INTO questions(qhash, data, categories) VALUES %L ON CONFLICT (qhash) DO UPDATE SET data = questions.data || EXCLUDED.data, categories = (SELECT ARRAY(SELECT DISTINCT UNNEST(questions.categories || EXCLUDED.categories) FROM questions WHERE questions.qhash = EXCLUDED.qhash)) WHERE questions.qhash = EXCLUDED.qhash RETURNING *",
-  "upsertQuestionsDev":"INSERT INTO questionsdev(qhash, data, categories) VALUES %L ON CONFLICT (qhash) DO UPDATE SET data = questionsdev.data || EXCLUDED.data, categories = (SELECT ARRAY(SELECT DISTINCT UNNEST(questionsdev.categories || EXCLUDED.categories) FROM questionsdev WHERE questionsdev.qhash = EXCLUDED.qhash)) WHERE questionsdev.qhash = EXCLUDED.qhash RETURNING *"
+  "upsertQuestionsDev":"INSERT INTO questionsdev(qhash, data, categories) VALUES %L ON CONFLICT (qhash) DO UPDATE SET data = questionsdev.data || EXCLUDED.data, categories = (SELECT ARRAY(SELECT DISTINCT UNNEST(questionsdev.categories || EXCLUDED.categories) FROM questionsdev WHERE questionsdev.qhash = EXCLUDED.qhash)) WHERE questionsdev.qhash = EXCLUDED.qhash RETURNING *",
+  "readQuestionsDev":"SELECT * FROM questionsdev"
 }

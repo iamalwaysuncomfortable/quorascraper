@@ -1,6 +1,6 @@
 const {checksum} = require('./mathlib');
 const pg = require('pg');
-const redis = require('redis');
+const redis = require("async-redis");
 const redisClient = redis.createClient({port:parseInt(process.env.REDIS_PORT,10), host:process.env.REDIS_HOST});
 const Validator = require('jsonschema').Validator;
 const validator = new Validator();
@@ -12,9 +12,13 @@ const upsertclause = pgqueries[process.env.UPSERTCLAUSE];
 const EventEmitter = require('events');
 class RedisEmitter extends EventEmitter {}
 const redisEmitter = new RedisEmitter();
-let pool;
+const pool = new pg.Pool();
 const validationSchemas = require('./validationData/docDataValidators.json');
 validator.addSchema(validationSchemas[validationSchema], '/' + validationSchema);
+pool.on('error', (err, client) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+});
 const cacheFunctions = {
     "question":async (data) => {let categories = '{}';
     if (data['categories'] instanceof Array) categories = '{' + String(data['categories']) + '}';
@@ -28,88 +32,69 @@ const cacheFunctions = {
     if (typeof record === 'string')  {redisClient.rpush(redisTableName, data['md5'] + "|SPLIT|" + record + '|SPLIT|' + categories)}}
 };
 
-
-async function openPool(){
-    if (typeof pool === "undefined") {
-        pool = new pg.Pool();
-        pool.on('error', (err, client) => {
-            console.error('Unexpected error on idle client', err);
-            process.exit(-1);
-        });
-    } else {
-        console.log("An existing pool is still active or pool variable has another artifact, " +
-            "please close call close pool protocol before proceeding");
-    }
-}
-
-async function closePool(){
-    if (typeof pool === "object" && typeof pool.domain === "object") {
-        pool.removeAllListeners();
-        await pool.end();
-        pool = undefined;
-    } else {
-        console.log("No pool was active, pool variable cleared, new pool can now be initialized");
-        pool = undefined;
-    }
-}
-
 async function executeQuery(query){
-    console.log(query);
-    await openPool();
     let status = "failure";
+    let client = await pool.connect();
     try {
-        const res = await pool.query(query);
-        console.log(res.rows[0]);
+        let res = await client.query(query);
         status = "success";
+        console.log("data write successful")
     } catch (e) {
+        console.log("query execution failed");
+        console.log("error was:");
         console.log(e);
         status = "failure";
     } finally {
-        await closePool();
+        await client.release();
+        return status;
     }
-    return status;
 }
 
 async function writeRecords() {
-    redisClient.lrange(redisTableName, 0, -1, async function(err, data) {
-        if (data instanceof Array){
-            let results = [];
-            let keys = {};
-            for(let i = 0, l = data.length; i < l; ++i){
-                let result = data[i].split('|SPLIT|');
-                if(!keys.hasOwnProperty(result[0]) && eval(validationSchemas[validationSchema+'-db'])) {
-                    results.push(result);
-                    keys[result[0]] = true;
-                }
+    let data = await redisClient.lrange(redisTableName, 0, -1);
+    if (data instanceof Array){
+        let results = [];
+        let keys = {};
+        for(let i = 0, l = data.length; i < l; ++i){
+            let result = data[i].split('|SPLIT|');
+            if(!keys.hasOwnProperty(result[0]) && eval(validationSchemas[validationSchema+'-db'])) {
+                result[2] = result[2].split('"').join('');
+                results.push(result);
+                keys[result[0]] = true;
             }
+        }
+        if (results.length > 0) {
             let query = format(upsertclause, results);
             let queryResult = await executeQuery(query);
             if (queryResult === "success"){
-                redisClient.del(redisTableName);
+                await redisClient.del(redisTableName);
             } else {
                 console.log("Record write failed");
             }
+        } else {
+            console.log("Record Write Failed Because there were no valid results");
         }
 
-    });
+    }
+
 }
 
 function preValidateCachedRecord(jsonb){
+    let isValid = false;
     try {
-        let jsonb = JSON.parse(jsonb);
-        if (typeof jsonb === "object") {
-            return (validateRecord(jsonb) === 'string');
+        let result = JSON.parse(jsonb);
+        if (typeof result === "object") {
+            isValid = (typeof validateRecord(result) === 'string');
         }
     }
-    catch (e) { console.log(e) }
-    return false;
+    catch (e) {}
+    return isValid;
 }
 
 function validateRecord(data) {
     if (data instanceof Object && typeof data.question === "string"){
         try {
             if (validator.validate(data, validationSchemas[validationSchema]).errors.length <= 0){
-                console.log("in validator statement");
                 if (data['md5'] === checksum(data[validationSchema],'md5') && data['md5'].length === 32){
                     try {
                         return JSON.stringify(data);
@@ -119,7 +104,7 @@ function validateRecord(data) {
                     }
                 }
                 else{
-                    console.log('md5 checksum did not match question title checksum');
+                    //console.log('md5 checksum did not match question title checksum');
                     return null
                 }
             }
@@ -146,12 +131,10 @@ async function pushRecords(data) {
         cacheFunctions[validationSchema](data);
     }
 
-    redisClient.llen(redisTableName, function(err, length) {
-        if (length > process.env.CACHERECORDLIMIT) {
-            console.log("Begin Write");
-            redisEmitter.emit('beginWrite');
-        }
-    })
+    let length = await redisClient.llen(redisTableName);
+    if (length >= process.env.CACHERECORDLIMIT) {
+        redisEmitter.emit('beginWrite');
+    }
 }
 
 function forceWrite(){

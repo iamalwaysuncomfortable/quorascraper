@@ -1,70 +1,57 @@
-const puppeteer = require('puppeteer');
 require('dotenv').config();
-const {getRandomInt} = require('./mathlib');
-let myclass = "text header_login_text_box ignore_interaction";
+let dbwriter = require('./dbwriter');
+//dbwriter.writeRecords();
+const puppeteer = require('puppeteer');
+let html_data_extractor = require('./html_data_extractor');
 let browser;
-let page;
-let element;
-let cookies;
-let testData1 = require("./testdata/question1.json");
-let testData2 = require("./testdata/question2.json");
+let currentPage;
+let debugquestions;
+
+async function parseData(page, collectionType){
+    const bodyHandle = await currentPage.$('body');
+    const html = await currentPage.evaluate(body => body.innerHTML, bodyHandle);
+    await bodyHandle.dispose();
+
+    if (collectionType === "myQuestions"){
+        let questions = html_data_extractor.scrapeMyQuestions(html);
+        dbwriter.pushRecords(questions);
+    }
+    if (collectionType === "topQuestions"){
+        let questions = html_data_extractor.scrapeTopQuestions(html);
+        debugquestions = questions;
+        dbwriter.pushRecords(questions);
+    }
+}
 
 (async () => {
-    let client = new pg.Client();
-    let testData1 = require("./testdata/question1.json");
-    let testData2 = require("./testdata/question2.json");
-    let questionID = checksum(testData1['Question'].toLowerCase(),'md5');
-    let questionData = JSON.stringify(testData1);
-    let text = 'INSERT INTO questions(qhash, data) VALUES($1, $2) RETURNING *';
-    let values = [questionID, questionData];
-    await client.connect();
-    const res = await client.query(text, values);
-    console.log(res.rows[0].message); // Hello world!
-    await client.end()
-    })();
-
+    browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
+    currentPage = await browser.newPage();
+    await currentPage.goto('file:///home/salty/Downloads/Quora/Question%20Value%20Insights%20-%20Quora100plus_011418_6mo.html');
+    await parseData(currentPage,'topQuestions');
+})();
 
 (async () => {
-    const browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
-    const page = await browser.newPage();
-    await page.goto('https://quora.com/partners');
-    await page.type('[placeholder="Email"]', process.env.QUORA_ID, {delay: getRandomInt(5,12)});
-    await page.type('[placeholder="Password"]', process.env.QUORA_PASS, {delay: getRandomInt(5,12)});
-    await page.click('[value=Login]', {delay: getRandomInt(15,60)});
+    browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
+    currentPage = await browser.newPage();
+    await currentPage.goto('file:///home/salty/Downloads/Quora/MyQuestionsRecent.html');
+    await parseData(currentPage,'myQuestions');
 })();
 
 
-(async () => {browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});})();
-(async () => {page = await browser.newPage();})();
-(async () => {await page.goto('https://quora.com/partners');})();
-(async () => {await page.select('select[name=email]')})();
-(async () => {await page.type('input[placeholder="Email"]', process.env.QUORA_ID, {delay: 100})})();
-(async () => {await page.type('input[placeholder="Password"]', process.env.QUORA_PASS, {delay: 10})})();
-(async () => {await page.click('[value=Login]')})();
-{}
+(async () => {
+
+    browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
+    currentPage = await browser.newPage();
+    await currentPage.goto('file:///home/salty/Downloads/Quora/MyQuestions011419.html');
+
+})();
+
+(async () => {await parseData(currentPage,'myQuestions');})();
 
 
-(async () => {await client.llen('mylist', function(err, reply) {answer = reply; console.log(answer)});})();
-(async () => {})();
-(async () => {})();
+async function scroll(page){
+    await page.evaluate(async () => {window.scrollBy(0, 450)});
+}
 
 
-(async () => {})();
-(async () => {})();
-
-    (async () => {
-        try {
-            console.log("trying");
-            element = await page.evaluate(() => {
-                let meclass = "text header_login_text_box ignore_interaction";
-                return document.getElementsByName("email");
-            });
-        }
-        catch (e){
-            console.log("error message:");
-            console.log(e);
-        }
-    })();
-
-(async () => {element = await page.$eval('.header login_text_box ignore_interaction', e => e);})();
-(async () => {})();
+//(async () => {})();

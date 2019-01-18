@@ -8,7 +8,7 @@
     },
   "required": ["md5","question","views"]
   },
-  "question-db":"result.length===3 && result[0].length === 32 && result[2][0] === '{' && result[2][result[2].length-1] === '}' && preValidateCachedRecord(data)",
+  "question-db":"result.length===3 && result[0].length === 32 && result[2][0] === '{' && result[2][result[2].length-1] === '}' && preValidateCachedRecord(result[1])",
   "skill":{
     "id": "/skill",
     "type": "object",
