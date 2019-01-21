@@ -7,13 +7,13 @@ const validator = new Validator();
 const redisTableName = process.env.REDISCACHETABLENAME;
 const validationSchema = process.env.VALIDATIONSCHEMA;
 const format = require('pg-format');
-const pgqueries = require('./validationData/pgqueries.json');
+const pgqueries = require('./appData/pgqueries.json');
 const upsertclause = pgqueries[process.env.UPSERTCLAUSE];
 const EventEmitter = require('events');
 class RedisEmitter extends EventEmitter {}
 const redisEmitter = new RedisEmitter();
 const pool = new pg.Pool();
-const validationSchemas = require('./validationData/docDataValidators.json');
+const validationSchemas = require('./appData/docDataValidators.json');
 validator.addSchema(validationSchemas[validationSchema], '/' + validationSchema);
 pool.on('error', (err, client) => {
     console.error('Unexpected error on idle client', err);
