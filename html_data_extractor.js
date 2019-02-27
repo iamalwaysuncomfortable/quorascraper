@@ -1,7 +1,22 @@
 const cheerio = require('cheerio');
 const {checksum} = require('./mathlib');
 const {getScrapedQuoraDateInUTS, getScrapedQuoraDateInUTC, getDayDelta} = require('./timeutil');
-getScrapedQuoraDateInUTS('thu', 'Jan 14 2019');
+
+require('dotenv').config();
+let dbwriter = require('./dbwriter');
+let {getRandomInt} = require('./mathlib');
+const puppeteer = require('puppeteer');
+const quoraPageTargets = require('./appData/quoraPageTargets.json');
+let html_data_extractor = require('./html_data_extractor');
+const EventEmitter = require('events');
+class ScrapeEmitter extends EventEmitter {}
+const scrapeEmitter = new ScrapeEmitter();
+let fs = require('fs');
+let browser;
+let currentPage;
+let debugquestions;
+let debughtml;
+
 
 function scrapeMyQuestions(html, referenceDate) {
     let questions = [];
@@ -14,7 +29,7 @@ function scrapeMyQuestions(html, referenceDate) {
                 continue
             }
             let question = {"categories": []};
-            let titleObject = $(questionCards[i]).find(".ui_story_title");
+            let titleObject = $(questionCards[i]).find(".ui_content_title");
             let linkObject = $(questionCards[i]).find(".question_link");
             let answerObject = $(questionCards[i]).find(".answer_count");
             let earningsObject = $(questionCards[i]).find(".earnings_amount");
@@ -52,13 +67,21 @@ function scrapeMyQuestions(html, referenceDate) {
                     question['categories'].push(topicObject[j].children[0].data);
                 }
             }
-            if (askObject.length === 0 && (isNaN(Number(askObject[1].children[1].children[0].data))) === false) {
-                question.requests = Number(askObject[1].children[1].children[0].data)
+            if (askObject.length > 0) {
+                try {
+                    if (isNaN(Number(askObject[0].children[1].children[0].data)) === false) {
+                        question.requests = Number(askObject[1].children[1].children[0].data);
+                    }
+                }
+                catch {
+                    //Do nothing
+                }
             }
             if (trafficObject.length > 0) {
                 question.internal = Number($(questionCards[i]).find(".internal_traffic")[0].children[0].children[0].data.split(' ')[0].replace('%', ''));
                 question.external = Number(trafficObject[0].children[0].children[0].data.split(' ')[0].replace('%', ''));
             }
+            question.iasked = true;
             questions.push(question);
         } catch (e) {
             console.log("Record not written, skipping. Error message was");
@@ -79,7 +102,7 @@ function scrapeTopQuestions(html){
                 continue
             }
             let question = {"categories": []};
-            let titleObject = $(questionCards[i]).find(".ui_story_title");
+            let titleObject = $(questionCards[i]).find(".ui_content_title");
             let linkObject = $(questionCards[i]).find(".question_link");
             let answerObject = $(questionCards[i]).find(".answer_count");
             let earningsObject = $(questionCards[i]).find(".earnings_amount");
@@ -120,6 +143,7 @@ function scrapeTopQuestions(html){
                 question.internal = Number($(questionCards[i]).find(".internal_traffic")[0].children[0].children[0].data.split(' ')[0].replace('%', ''));
                 question.external = Number(trafficObject[0].children[0].children[0].data.split(' ')[0].replace('%', ''));
             }
+            question.iasked = false;
             questions.push(question);
         } catch (e) {
             console.log("Record not written, skipping. Error message was");
@@ -128,6 +152,7 @@ function scrapeTopQuestions(html){
     }
     return questions
 }
+
 
 module.exports.scrapeMyQuestions = scrapeMyQuestions;
 module.exports.scrapeTopQuestions = scrapeTopQuestions;

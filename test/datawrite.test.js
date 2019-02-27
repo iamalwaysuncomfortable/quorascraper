@@ -91,6 +91,7 @@ describe('Postgres Write Operations', () => {
         assert.equal(cacheLength,0);
 
     });
+
     it("Write cache operation check doesn't allow malformed cache data to be executed against postgres", async () => {
         await redisClient.rpush(process.env.REDISCACHETABLENAME, badTestCacheData5);
         await redisClient.rpush(process.env.REDISCACHETABLENAME, badTestCacheData6);

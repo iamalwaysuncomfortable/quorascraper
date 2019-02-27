@@ -2,6 +2,7 @@ require('dotenv').config();
 process.env.REDISCACHETABLENAME = 'testcache';
 process.env.UPSERTCLAUSE = 'upsertQuestionsDev';
 process.env.TARGETTABLE = 'questionsdev';
+process.env
 const pg = require('pg');
 const pool = pg.Pool();
 let targetTable = process.env.TARGETTABLE;
