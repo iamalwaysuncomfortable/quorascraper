@@ -10,11 +10,12 @@ const scrapeEmitter = new ScrapeEmitter();
 let fs = require('fs');
 let browser;
 let currentPage;
+let newPage;
 let debugquestions;
 let debughtml;
 
 async function writeQuestion(question, page){
-    await page.waitFor(getRandomInt(2000, 7000));
+    await page.waitFor(getRandomInt(10000, 30000));
     await page.evaluate(() => document.querySelector( 'a.AskQuestionButton' ).click() );
     await page.waitFor(getRandomInt(2000, 5000));
     await page.evaluate(() => document.querySelector( 'textarea.selector_input' ).click() );
@@ -30,21 +31,40 @@ async function writeQuestion(question, page){
             break;
         }
     }
-    await page.waitFor(getRandomInt(2500, 5000));
-    await page.mouse.click(getRandomInt(2,50),getRandomInt(2,50))
+    await page.waitFor(getRandomInt(3500, 5000));
+    await page.mouse.click(getRandomInt(2,50),getRandomInt(300,400));
+    if (getRandomInt(0,2) > 0){
+        await page.mouse.click(getRandomInt(2,50),getRandomInt(300,400))
+    }
 }
 
 (async () => {
     browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
     currentPage = await browser.newPage();
     await currentPage.goto('https://quora.com/partners');
-    let results = fs.readFileSync('./workingData/results.txt').toString().split('\n');
-    for (let i = 0; i < 41; i++){
-        await writeQuestion(results[i],currentPage);
-        currentPage.waitFor(getRandomInt(100, 3000));
-        await currentPage.mouse.click(getRandomInt(2,50),getRandomInt(2,50))
-    }
+})();
 
+(async () => {
+    text = await currentPage.$eval("Most Recent", el => el.innerText);
+})();
+
+(async () => {
+})();
+
+(async () => {
+})();
+
+(async () => {
+    let results = fs.readFileSync('./workingData/corpusresults.txt').toString().split('\n');
+    for (let i = 0; i < results.length; i++){
+        await writeQuestion(results[i],currentPage);
+        currentPage.waitFor(getRandomInt(30000, 90000));
+        await currentPage.mouse.click(getRandomInt(2,50),getRandomInt(300,400));
+        if (i > 0 && i % 30 === 0){
+            await currentPage.waitFor(getRandomInt(1200000, 2800000));
+            dbwriter.upsertAskedQuestions()
+        }
+    }
 })();
 
 async function parseData(page, collectionType){
@@ -81,17 +101,17 @@ async function scrapeDownloadedPages(pageType, target, date){
     browser = await puppeteer.launch({headless:true, userDataDir: './browserdata'});
     currentPage = await browser.newPage();
     //scrapeDownloadedPages('topQuestions', process.env.HOME + '/Quora/TopQuestions');
-    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0214', '2019-02-14');
-    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0215', '2019-02-15');
-    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0213', '2019-02-13');
-    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0217', '2019-02-17');
-    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions2');
+//    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0214', '2019-02-14');
+//    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0215', '2019-02-15');
+//    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0213', '2019-02-13');
+//    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0217', '2019-02-17');
+    await scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions2');
 })();
 
 
 
 (async () => {
-
+    newPage = await browser.newPage();
     //scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions2');
 })();
 

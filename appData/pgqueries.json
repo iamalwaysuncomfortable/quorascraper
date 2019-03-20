@@ -4,5 +4,9 @@
   "addQuestionsTimeWithDate":"INSERT INTO questions_time(qhash, data, date) VALUES %L ON CONFLICT DO NOTHING",
   "upsertQuestionsDev":"INSERT INTO questionsdev(qhash, data, categories) VALUES %L ON CONFLICT (qhash) DO UPDATE SET data = questionsdev.data || EXCLUDED.data, categories = (SELECT ARRAY(SELECT DISTINCT UNNEST(questionsdev.categories || EXCLUDED.categories) FROM questionsdev WHERE questionsdev.qhash = EXCLUDED.qhash)) WHERE questionsdev.qhash = EXCLUDED.qhash RETURNING *",
   "readQuestionsDev":"SELECT * FROM questionsdev",
-  "readQuestionsTime":"SELECT * FROM questions_time"
+  "readQuestionsTime":"SELECT * FROM questions_time",
+  "getAskedQuestions":"SELECT * FROM questionsasked",
+  "upsertAskedQuestionsFromScrapedQuestions":"INSERT INTO questionsasked (qhash, question, asked) select qhash, data ->> 'question' as question, 'true' from questions ON CONFLICT (qhash) DO UPDATE SET asked = 'true'",
+  "insertNewAskedQuestions":"INSERT INTO questionsasked (qhash, question, asked, categories) VALUES %L ON CONFLICT DO NOTHING",
+  "upsertAskedQuestionWithStatus":"INSERT INTO questionsasked (qhash, question, asked) VALUES %L ON CONFLICT (qhash) DO UPDATE SET asked = 't'"
 }

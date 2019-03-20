@@ -38,7 +38,9 @@ async function executeQuery(query){
     let status = "failure";
     let client = await pool.connect();
     try {
+        console.log(query);
         let res = await client.query(query);
+        console.log(res);
         status = "success";
         console.log("data write successful")
     } catch (e) {
@@ -50,6 +52,31 @@ async function executeQuery(query){
         await client.release();
         return status;
     }
+}
+
+async function updateQuestionsAskedCorpusFromScrapedQuestions(){
+    let queryResult = await executeQuery(pgqueries["upsertAskedQuestionsFromScrapedQuestions"]);
+    return queryResult;
+}
+
+async function stageNewQuestions(questions) {
+    let values = [];
+    for (let i = 0; i < questions.length; i++){
+        values.push(checksum(questions[i]), questions[i], 'f');
+    }
+    let query = format(pgqueries["insertNewAskedQuestions"], values);
+    let queryResult = await executeQuery(query);
+    return queryResult;
+}
+
+async function upsertAskedQuestions(questions) {
+    let values = [];
+    for (let i = 0; i < questions.length; i++){
+        values.push([checksum(questions[i],'md5'), questions[i], 't']);
+    }
+    let query = format(pgqueries["upsertAskedQuestionWithStatus"], values);
+    let queryResult = await executeQuery(query);
+    return queryResult;
 }
 
 async function writeRecords(date) {
@@ -82,8 +109,11 @@ async function writeRecords(date) {
         }
 
         if (results.length > 0 || timeResults.length > 0) {
-
+            console.log("INPUT");
+            console.log(results);
             let query = format(upsertclause, results);
+            console.log("FORMATTED INPUT");
+            console.log(query);
             let queryResult;
             let timeQueryResult;
 
@@ -186,3 +216,6 @@ module.exports.pushRecords = pushRecords;
 module.exports.validateRecord = validateRecord;
 module.exports.writeRecords = writeRecords;
 module.exports.forceWrite = forceWrite;
+module.exports.updateQuestionsAskedCorpusFromScrapedQuestions = updateQuestionsAskedCorpusFromScrapedQuestions;
+module.exports.stageNewQuestions = stageNewQuestions;
+module.exports.upsertAskedQuestions = upsertAskedQuestions;

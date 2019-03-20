@@ -60,3 +60,14 @@ SELECT DISTINCT ON (1) * FROM ('b56857169fbcab5074a80d131c817213','{"md5":"b5685
 insert into mclovin(qhash, data, categories) VALUES('b56857169fbcab5074a80d131c817213', '{"md5": "b56857169fbcab5074a80d131c817213","question":"Testy McTest Test?","quora_categories":["Test1", "Test2"],"views":230,"answers":3,"question_url":"https://quora.com/what_is_life"}','{ass, butt}')
 
 INSERT INTO questionsdev(qhash, data, categories) VALUES ('b56857169fbcab5074a80d131c817213', '{"md5":"b56857169fbcab5074a80d131c817213","question":"Testy McTest Test?","quora_categories":["Test1","Test2"],"views":230,"answers":3,"question_url":"https://quora.com/what_is_life"}', '{}'), ('8d8d87ee0ff8ca37cf549478dbfc8c1b', '{"md5":"8d8d87ee0ff8ca37cf549478dbfc8c1b","question":"Test 2 What blafwew ? awefa23 afeawe 12332. afw32f ser sergegseg 2434g3, awefawe!!","quora_categories":["Test3","Test4","Test5"],"views":540,"answers":3,"question_url":"https://quora.com/what_is_life","ad_impressions":30,"earnings":0.01,"traffic_ext":0.07,"first_question_date":123,"type":"Type1","supercategory":"Test","supercategory2":"Test2","structure":"Declarative","sentences":1,"characters":50}', '{}') ON CONFLICT (qhash) DO UPDATE SET data = questionsdev.data || EXCLUDED.data, categories = (SELECT ARRAY(SELECT DISTINCT UNNEST(questionsdev.categories || EXCLUDED.categories) FROM questionsdev WHERE questionsdev.qhash = EXCLUDED.qhash)) WHERE questionsdev.qhash = EXCLUDED.qhash RETURNING *;
+
+SELECT *
+FROM  (
+    SELECT DISTINCT 1 + trunc(random() * 4)::integer AS qhash
+    FROM   generate_series(1, 1100) g
+    ) r
+JOIN  questionsasked USING (qhash)
+LIMIT  10;
+
+SELECT DISTINCT 1 + trunc(random() * 500)::integer AS qhash
+FROM   generate_series(1, 100) g;
