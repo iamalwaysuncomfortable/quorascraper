@@ -24,7 +24,10 @@ async function writeQuestion(question, page){
     await page.waitFor(getRandomInt(3500, 5000));
     await page.mouse.click(getRandomInt(2,50),getRandomInt(300,400));
     if (getRandomInt(0,2) > 0){
-        await page.mouse.click(getRandomInt(2,50),getRandomInt(300,400))
+        await page.waitFor(getRandomInt(2500, 5000));
+        await page.mouse.click(30,325);
+        await page.waitFor(getRandomInt(2500, 5000));
+        await page.mouse.click(30,325);
     }
 }
 
@@ -33,16 +36,28 @@ async function cleanUp(page, browser) {
     browser.close();
 }
 
+async function closeCategoryPopup(page) {
+    page.evaluate(() => {
+            let elements = document.getElementsByClassName('ui_button_icon');
+            for (let element of elements) {
+                if (element.clientHeight > 10 && element.clientWidth > 10) {
+                    element.click();
+                }
+            }
+        }
+    );
+}
+
 async function writeQuestionBatch(questions, page) {
-    let stopInterval = getRandomInt(40,60);
+    let stopInterval = getRandomInt(60 ,70);
     for (let i = 0; i < questions.length; i++){
         await writeQuestion(questions[i],page);
         page.waitFor(getRandomInt(60000, 120000));
-        await page.mouse.click(getRandomInt(2,50),getRandomInt(300,400));
+        await page.mouse.click(getRandomInt(30,50),getRandomInt(300,400));
         if (i > 0 && i % stopInterval === 0){
             await dbwriter.upsertAskedQuestions(questions.slice(i-stopInterval, i));
             await page.waitFor(getRandomInt(600000, 1200000));
-            stopInterval = getRandomInt(20,40);
+            stopInterval = getRandomInt(60,70);
         }
     }
     await dbwriter.upsertAskedQuestions(questions);
@@ -57,7 +72,7 @@ async function getQuestions(amount, inclusiveCategories, exclusiveCategories) {
     }
 }
 
-async function initializeScraping(numQuestions, categoriesToInclude, categoriesToExclude){
+async function initializePosting(numQuestions, categoriesToInclude, categoriesToExclude){
     let browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
     const page = await browser.newPage();
     await page.goto('https://quora.com/partners');
@@ -72,7 +87,5 @@ async function initializeScraping(numQuestions, categoriesToInclude, categoriesT
 
 }
 
-let q;
-(async () => {
-    initializeScraping(50, undefined, ['language, horoscopes']);
-})();
+module.exports.initializePosting = initializePosting;
+module.exports.getQuestions = getQuestions;

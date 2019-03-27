@@ -38,35 +38,6 @@ async function writeQuestion(question, page){
     }
 }
 
-(async () => {
-    browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
-    currentPage = await browser.newPage();
-    await currentPage.goto('https://quora.com/partners');
-})();
-
-(async () => {
-    text = await currentPage.$eval("Most Recent", el => el.innerText);
-})();
-
-(async () => {
-})();
-
-(async () => {
-})();
-
-(async () => {
-    let results = fs.readFileSync('./workingData/corpusresults.txt').toString().split('\n');
-    for (let i = 0; i < results.length; i++){
-        await writeQuestion(results[i],currentPage);
-        currentPage.waitFor(getRandomInt(30000, 90000));
-        await currentPage.mouse.click(getRandomInt(2,50),getRandomInt(300,400));
-        if (i > 0 && i % 30 === 0){
-            await currentPage.waitFor(getRandomInt(1200000, 2800000));
-            dbwriter.upsertAskedQuestions()
-        }
-    }
-})();
-
 async function parseData(page, collectionType){
     const bodyHandle = await currentPage.$('body');
     const html = await currentPage.evaluate(body => body.innerHTML, bodyHandle);
@@ -90,7 +61,7 @@ async function scrapeDownloadedPages(pageType, target, date){
     for (let i = 0; i < files.length; i++) {
         if (files[i].substr(files[i].length - 5) === '.html'){
             await currentPage.goto('file://' + target + '/' + files[i], {timeout: 0});
-            await parseData(currentPage, pageType);
+            await parseData(currentPage, pageType, false);
         }
     }
     await dbwriter.writeRecords(date);
@@ -105,19 +76,47 @@ async function scrapeDownloadedPages(pageType, target, date){
 //    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0215', '2019-02-15');
 //    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0213', '2019-02-13');
 //    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0217', '2019-02-17');
-    await scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions2');
+    await scrapeDownloadedPages('topQuestions', process.env.HOME + '/Quora/TopQuestions0327');
 })();
 
+async function parseData(page, collectionType){
+    const bodyHandle = await page.$('body');
+    const html = await page.evaluate(body => body.innerHTML, bodyHandle);
+    await bodyHandle.dispose();
+
+    if (collectionType === "myQuestions"){
+        let questions = html_data_extractor.scrapeMyQuestions(html);
+        debugquestions = questions;
+        dbwriter.pushRecords(questions);
+    }
+    if (collectionType === "topQuestions"){
+        let questions = html_data_extractor.scrapeTopQuestions(html);
+        debugquestions = questions;
+        dbwriter.pushRecords(questions);
+    }
+}
+
+
+async function scrapeDownloadedPages(page, pageType, target, date){
+    let files = fs.readdirSync(target);
+    for (let i = 0; i < files.length; i++) {
+        if (files[i].substr(files[i].length - 5) === '.html'){
+            await page.goto('file://' + target + '/' + files[i], {timeout: 0});
+            await parseData(page, pageType);
+        }
+    }
+    await dbwriter.writeRecords(date);
+}
 
 
 (async () => {
-    newPage = await browser.newPage();
-    //scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions2');
+//    newPage = await browser.newPage();
+    scrapeDownloadedPages('myQuestions', process.env.HOME + '/Quora/MyQuestions0320');
 })();
 
 
 (async () => {
-    await currentPage.goto('https://quora.com/partners');
+    await scrapeMyQuestions()
 })();
 
 
@@ -128,7 +127,9 @@ async function scrapeDownloadedPages(pageType, target, date){
     await page.mouse.click(getRandomInt(0,100),getRandomInt(0,100))
 })();
 
-
+(async () => {
+    await page.mouse.click(getRandomInt(0,100),getRandomInt(0,100))
+})();
 
 
 async function initializeBrowserPage(){

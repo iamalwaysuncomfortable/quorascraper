@@ -2,20 +2,20 @@ require('dotenv').config();
 let dbwriter = require('./dbwriter');
 let {getRandomInt} = require('./mathlib');
 const puppeteer = require('puppeteer');
+const SAVEDIRECTORY = process.env.SAVEDIRECTORY;
 let html_data_extractor = require('./html_data_extractor');
 let fs = require('fs');
 
-async function scroll(page, scrollInterval){
-    await page.evaluate(async (scrollInterval) => {window.scrollBy(0, scrollInterval)}, scrollInterval);
-}
-
 async function clickViewMoreButton(page){
-    let elements = await page.$$('.ui_section_footer');
-    for (let element of elements) {
-        if (element.clientHeight > 0) {
-            element.click();
+    page.evaluate(() => {
+            let elements = document.getElementsByClassName('ui_section_footer');
+            for (let element of elements) {
+                if (element.clientHeight > 0) {
+                    element.click();
+                }
+            }
         }
-    }
+    );
 }
 
 async function scrollWithInterval(page, scrollInterval=1000) {
@@ -23,28 +23,22 @@ async function scrollWithInterval(page, scrollInterval=1000) {
     let numberOfScrollFailures = 0;
 
     while (allResultsScraped === false){
+        await page.waitFor(1000);
 
-        await page.waitFor(getRandomInt(300, 800));
-        let previouseDocHeight = await page.evaluate(() => {return document.body.scrollHeight});
-        console.log(previouseDocHeight)
-        scroll(page, scrollInterval);
-        let postScrollDocHeight = await page.evaluate(() => {return document.body.scrollHeight});
-        let estimatedDocHeight = previouseDocHeight + scrollInterval - 50;
+        let previousHeight = await page.evaluate('document.body.scrollHeight');
 
-        console.log(estimatedDocHeight);
-        console.log(postScrollDocHeight);
-        if (estimatedDocHeight >  postScrollDocHeight) {
+        try {
+            await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+        } catch (e){
+            console.log("Scroll failed")
+        }
 
+        try {
+            await page.waitForFunction('document.body.scrollHeight > ${previousHeight}', {timeout: 5000});
+        } catch (e){
             numberOfScrollFailures =+ 1;
-
-            await page.waitFor(getRandomInt(5000, 10000));
-            let preClickHeight = await page.evaluate(() => {return document.body.scrollHeight});
-            await clickViewMoreButton(page);
-            await page.waitFor(getRandomInt(7000, 10000));
-            let postClickHeight = await page.evaluate(() => {return document.body.scrollHeight});
-            if (postClickHeight > preClickHeight){
-                numberOfScrollFailures = 0;
-            }
+            await clickViewMoreButton(page, scrollInterval);
+            await page.waitFor(scrollInterval);
         }
 
         if (numberOfScrollFailures > 5) {
@@ -82,10 +76,7 @@ async function scrapeMyQuestions(scrollInterval){
     let browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
     let page = await browser.newPage();
     await page.goto('https://quora.com/partners');
-//    await scrollWithInterval(page, scrollInterval);
-    //Download it
-//    await parseData(page, "myQuestions");
-//    cleanUp(page, browser);
+
 }
 
 async function scrapeDownloadedPages(page, pageType, target, date){
@@ -100,15 +91,47 @@ async function scrapeDownloadedPages(page, pageType, target, date){
 }
 
 
+async function savePageToFile(page) {
+    const html = await page.content();
+    let d = new Date();
+    let date = new Date().toString().split(d.getUTCFullYear());
+    date = (((date[0].replace(/\ /g,'_') + d.getUTCFullYear()).replace('_',' ')).split(' '))[1];
+    let filepath = SAVEDIRECTORY + '/' + date + '/myQuestions.html';
+    fs.writeFileSync(filepath, html);
+}
 
-(async () => {
-    browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
-    page = await browser.newPage();
+async function scrapeMyQuestions(){
+    let browser = await puppeteer.launch({headless:false, userDataDir: './browserdata'});
+    let page = await browser.newPage();
     await page.goto('https://quora.com/partners');
-})();
+    await scrollWithInterval(page, 1000);
+    await savePageToFile(page);
+    try{
+        await parseData(page, "myQuestions");
+    } catch (e) {
+        console.log(e);
+    }
+    await cleanUp(page, browser);
+}
+
+async function scrapeTopQuestions(){
+    console.log("Functionality not implemented yet, will be in future")
+}
+
+//Scrape
+async function beginScrape (questionType, local=false) {
+    if (questionType === "myQuestions" && local===false){
+        await scrapeMyQuestions();
+    } else if (questionType === "topQuestions" && local===false) {
+        await scrapeTopQuestions();
+    } else {
+        throw ("question type specified not supported")
+    }
+
+}
+
+module.exports.beginScrape = beginScrape;
 
 
-(async () => {
 
 
-})();

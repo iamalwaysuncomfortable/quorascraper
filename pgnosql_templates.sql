@@ -71,3 +71,9 @@ LIMIT  10;
 
 SELECT DISTINCT 1 + trunc(random() * 500)::integer AS qhash
 FROM   generate_series(1, 100) g;
+
+UPDATE questionsasked SET question = 	REGEXP_REPLACE(question, 'them them', 'them');
+
+UPDATE questionsasked SET question = REGEXP_REPLACE(question, 'How many followers  ', 'How many followers do ');
+
+UPDATE questionsasked SET question = REGEXP_REPLACE(question, 'How do iterate', 'How do you iterate');

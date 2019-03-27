@@ -2,26 +2,19 @@ const cheerio = require('cheerio');
 const {checksum} = require('./mathlib');
 const {getScrapedQuoraDateInUTS, getScrapedQuoraDateInUTC, getDayDelta} = require('./timeutil');
 
-require('dotenv').config();
-let dbwriter = require('./dbwriter');
-let {getRandomInt} = require('./mathlib');
-const puppeteer = require('puppeteer');
-const quoraPageTargets = require('./appData/quoraPageTargets.json');
-let html_data_extractor = require('./html_data_extractor');
-const EventEmitter = require('events');
-class ScrapeEmitter extends EventEmitter {}
-const scrapeEmitter = new ScrapeEmitter();
-let fs = require('fs');
-let browser;
-let currentPage;
-let debugquestions;
-let debughtml;
 
-
-function scrapeMyQuestions(html, referenceDate) {
+function scrapeMyQuestions(html, referenceDate, newest=true) {
     let questions = [];
     let $ = cheerio.load(html);
-    let questionCards = $('div.paged_list_wrapper')[0].children;
+    let questionGroups = $('div.paged_list_wrapper');
+    let selectedIndex = 0;
+    for (let c = 1; c < questionGroups.length; c++){
+        if (questionGroups[c].children.length > questionGroups[c-1].children.length){
+            selectedIndex = c;
+        }
+    }
+
+    let questionCards = $('div.paged_list_wrapper')[selectedIndex].children;
     for (let i = 0; i < questionCards.length; i++)
     {
         try {
@@ -53,9 +46,16 @@ function scrapeMyQuestions(html, referenceDate) {
                 question.earnings = Number(earningsObject[0].children[0].data.replace(/[^0-9.-]+/g, ""));
             }
             if (metaDataObject.length > 0) {
-                question.followers = Number(metaDataObject[0].children[0].children[1].children[0].data.split(',').join(''));
-                question.views = Number(metaDataObject[0].children[1].children[1].children[0].data.split(',').join(''));
-                question.adimpressions = Number(metaDataObject[0].children[2].children[1].children[0].data.split(',').join(''));
+                if (newest === true){
+                    question.followers = Number(metaDataObject[0].children[0].children[0].children[1].children[0].data.split(',').join(''));
+                    question.views = Number(metaDataObject[0].children[0].children[1].children[1].children[0].data.split(',').join(''));
+                    question.adimpressions = Number(metaDataObject[0].children[0].children[2].children[1].children[0].data.split(',').join(''));
+                } else {
+                    question.followers = Number(metaDataObject[0].children[0].children[1].children[0].data.split(',').join(''));
+                    question.views = Number(metaDataObject[0].children[1].children[1].children[0].data.split(',').join(''));
+                    question.adimpressions = Number(metaDataObject[0].children[2].children[1].children[0].data.split(',').join(''));
+                }
+
             }
             if (dateObject.length > 0){
                 let time = dateObject[0].children[0].data.replace('Asked ','');
@@ -91,10 +91,17 @@ function scrapeMyQuestions(html, referenceDate) {
     return questions
 }
 
-function scrapeTopQuestions(html){
+function scrapeTopQuestions(html, newest=true){
     let questions = [];
     let $ = cheerio.load(html);
-    let questionCards = $('div.paged_list_wrapper')[0].children;
+    let questionGroups = $('div.paged_list_wrapper');
+    let selectedIndex = 0;
+    for (let c = 1; c < questionGroups.length; c++){
+        if (questionGroups[c].children.length > questionGroups[c-1].children.length){
+            selectedIndex = c;
+        }
+    }
+    let questionCards = $('div.paged_list_wrapper')[selectedIndex].children;
     for (let i = 0; i < questionCards.length; i++)
     {
         try {
@@ -125,9 +132,15 @@ function scrapeTopQuestions(html){
                 question.earnings = Number(earningsObject[0].children[0].data.replace(/[^0-9.-]+/g, ""));
             }
             if (metaDataObject.length > 0) {
-                question.followers = Number(metaDataObject[0].children[0].children[1].children[0].data.split(',').join(''));
-                question.views = Number(metaDataObject[0].children[1].children[1].children[0].data.split(',').join(''));
-                question.adimpressions = Number(metaDataObject[0].children[2].children[1].children[0].data.split(',').join(''));
+                if (newest === true){
+                    question.followers = Number(metaDataObject[0].children[0].children[0].children[1].children[0].data.split(',').join(''));
+                    question.views = Number(metaDataObject[0].children[0].children[1].children[1].children[0].data.split(',').join(''));
+                    question.adimpressions = Number(metaDataObject[0].children[0].children[2].children[1].children[0].data.split(',').join(''));
+                } else {
+                    question.followers = Number(metaDataObject[0].children[0].children[1].children[0].data.split(',').join(''));
+                    question.views = Number(metaDataObject[0].children[1].children[1].children[0].data.split(',').join(''));
+                    question.adimpressions = Number(metaDataObject[0].children[2].children[1].children[0].data.split(',').join(''));
+                }
             }
             if (dateObject.length > 0){
                 let time = dateObject[0].children[0].data.replace('Asked ','');
