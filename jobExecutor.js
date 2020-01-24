@@ -6,6 +6,20 @@ const argv = require('yargs').option('args',{ string : true}).option('includeCat
     type: 'array',
     desc: 'build options'
 }).argv;
+
+if ("port" in argv && "user" in argv && "database" in argv && "host" in argv){
+    process.env['PGUSER'] = argv["user"];
+    process.env['PGHOST'] = argv["host"];
+    process.env['PGDATABASE'] = argv["database"];
+    process.env['PGPORT'] = argv["port"];
+} else {
+    process.env['PGUSER'] = 'postgres';
+    process.env['PGHOST'] = 'localhost';
+    process.env['PGDATABASE'] = 'quorastats';
+    process.env['PGPORT'] = '5432';
+    process.env['PGPASSWORD'] = 'test';
+}
+
 const scraper = require('./quoraScraper');
 const poster = require('./quoraPoster');
 
@@ -13,10 +27,20 @@ console.log(argv);
 
 if ("scrape" in argv && !("post" in argv)) {
     (async () => {
-        if ("myQuestions" in argv){
-            await scraper.beginScrape("myQuestions")
-        } else if ("topQuestions" in argv) {
-            await scraper.beginScrape("topQuestions");
+        if ("myQuestions" in argv && !("topQuestions" in argv)){
+            if ("localDirectory" in argv && typeof(argv["localDirectory"]) === "string") {
+                await scraper.beginScrape("myQuestions", argv["localDirectory"], argv["date"]);
+            }
+            else {
+                await scraper.beginScrape("myQuestions");
+            }
+        } else if ("topQuestions" in argv && !("myQuestions" in argv)) {
+            if ("localDirectory" in argv && typeof(argv["localDirectory"]) === "string") {
+                await scraper.beginScrape("topQuestions", argv["localDirectory"], argv["date"]);
+            }
+            else {
+                await scraper.beginScrape("topQuestions");
+            }
         }
     })();
 } else if ("post" in argv && !("scrape" in argv) && ("numQuestions" in argv && Number.isInteger(argv["numQuestions"]))) {
